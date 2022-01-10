@@ -7,4 +7,4 @@ A 2.5D CSS/DOM Game engine
 
 ### Example
 
-(Example game)[https://boxworld1.netlify.app/]
+[Example game](https://boxworld1.netlify.app/)
