@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link href="/assets/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+
+    <meta name="robots" content="noindex" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Mono:wght@100;400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="dist/boxworld.min.js"></script>
+    <script>
+      window.addEventListener("load", () => {
+        const update = (state) => {
+          // Check if we need to change maps
+          if (state.outsideBounds) {
+            if (state.currentLevel.id === "start") {
+              if (state.outsideBounds === "r") {
+                game.setLevel("east", [1, 5]);
+              }
+              if (state.outsideBounds === "l") {
+                game.setLevel("west", [9, 5]);
+              }
+              if (state.outsideBounds === "d") {
+                game.setLevel("south", [5, 5]);
+              }
+              if (state.outsideBounds === "u") {
+                game.setLevel("north", [5, 9]);
+              }
+            } else if (state.currentLevel.id === "east") {
+              game.setLevel("start", [31, 15]);
+            } else if (state.currentLevel.id === "west") {
+              game.setLevel("start", [1, 17]);
+            } else if (state.currentLevel.id === "north") {
+              game.setLevel("start", [17, 1]);
+            } else if (state.currentLevel.id === "south") {
+              game.setLevel("start", [21, 31]);
+            }
+          }
+          if (state.globalState.gameOver && !state.globalState.isEnded) {
+            state.globalState.isEnded = true;
+            game.gameOver();
+          }
+        };
+
+        const render = () => {
+          // console.log("tick!");
+        };
+
+        // Create game object
+        const game = Engine({
+          title: "Example game",
+          byline: "Office smalltalk hero",
+          render,
+          update,
+          startLevel: "start",
+          levels: [startLevel, eastLevel],
+          selector: "app",
+          // debug: true,
+        });
+
+        // Add player
+        game.addPlayer({
+          asset: "player",
+          state: {
+            isTalking: false,
+          },
+        });
+      });
+    </script>
+
+    <title>Example game</title>
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>

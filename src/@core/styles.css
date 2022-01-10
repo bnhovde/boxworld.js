@@ -1,0 +1,423 @@
+@import "./backpack.css";
+
+:root {
+  --base-font-size: 2rem;
+  --col-text: rgb(42, 67, 71);
+  --font-family: "Noto Sans Mono", monospace;
+}
+
+html {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  vertical-align: baseline;
+  font-size: 62.5%;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Safari viewport bug fix */
+  height: -webkit-fill-available;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  vertical-align: baseline;
+  font-weight: normal;
+  font-family: var(--font-family);
+  color: var(--col-text);
+  font-size: var(--base-font-size);
+  overflow: hidden;
+
+  min-height: 100vh; /* Fill entire height of page */
+  min-height: -webkit-fill-available; /* Safari viewport bug fix */
+}
+
+h1 {
+  font-weight: bold;
+  font-size: 5vw;
+}
+
+.screen {
+  perspective: 1100px;
+  height: 100vh;
+  width: 100vw;
+  background: #fff59b;
+  transition: all 1s ease;
+}
+
+.scene {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 80vmin;
+  height: 80vmin;
+  transform: translate(-50%, -50%);
+  transform-style: preserve-3d;
+  transition: transform 1s ease;
+}
+
+@media (min-width: 600px) {
+  .scene {
+    width: 60vmin;
+    height: 60vmin;
+  }
+}
+
+.plane {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform: rotateX(60deg);
+  transform-style: preserve-3d;
+  transition: transform 1s ease;
+}
+
+.plane__inner {
+  position: absolute;
+  top: 0%;
+  left: 0%;
+  right: 0%;
+  bottom: 0%;
+  transform-style: preserve-3d;
+}
+
+.plane__elements {
+  position: absolute;
+  top: 0%;
+  left: 0%;
+  right: 0%;
+  bottom: 0%;
+  transform-style: preserve-3d;
+}
+
+.map {
+  display: grid;
+  grid-template-rows: repeat(11, 1fr);
+  grid-template-columns: repeat(11, 1fr);
+  transform-style: preserve-3d;
+}
+
+.plane__inner[data-moving="ArrowUp"] .tile:nth-child(n + 111) > img {
+  opacity: 0;
+}
+
+.plane__inner[data-moving="ArrowDown"] .tile:nth-child(-n + 11) > img {
+  opacity: 0;
+}
+
+.plane__inner[data-moving="ArrowRight"] .tile:nth-child(11n-10) > img {
+  opacity: 0;
+}
+
+.plane__inner[data-moving="ArrowLeft"] .tile:nth-child(11n) > img {
+  opacity: 0;
+}
+
+.tile {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding-bottom: 100%;
+  transform-style: preserve-3d;
+}
+
+.tile > img {
+  position: absolute;
+  transition: opacity 0.2s ease;
+}
+
+.tile__fg {
+  transform-style: preserve-3d;
+  transform: rotateX(-90deg) translateY(-50%);
+}
+
+.tile__fg.-vert-l {
+  transform: rotateX(-90deg) translateY(-50%) rotateY(90deg) translateZ(-20px);
+}
+
+.tile__fg.-vert-r {
+  transform: rotateX(-90deg) translateY(-50%) rotateY(90deg) translateZ(20px);
+}
+
+.tile__top {
+  transform-style: preserve-3d;
+  transform: rotateX(-90deg) translateY(-150%);
+}
+
+.tile__bubble {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  transform-style: preserve-3d;
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.tile__entity {
+  position: absolute;
+  transform: rotateX(-90deg) translateY(-50%);
+  transform-style: preserve-3d;
+}
+
+.tile__entity.-near .tile__bubble {
+  animation: appear 0.2s both 0.2s;
+}
+
+.tile__entity.-active .tile__bubble {
+  animation: none;
+}
+
+.tile__entity.-visited .tile__bubble {
+  animation: none;
+}
+
+.tile__debug {
+  position: absolute;
+  font-size: 10px;
+}
+
+.debug {
+  position: fixed;
+  bottom: 0;
+  padding: 20px;
+  font-size: 14px;
+}
+
+/* Non-engine styling */
+
+.player {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9%;
+  height: 9%;
+  transform-style: preserve-3d;
+  transform: translateX(-50%) translateY(-50%);
+}
+
+.player-inner {
+  position: absolute;
+  transform-style: preserve-3d;
+  transform: rotateX(-90deg) translateY(-50%);
+}
+
+.-moving .player-inner > img {
+  animation: walk 0.4s cubic-bezier(0.61, 0.01, 0.22, 0.98) infinite;
+}
+
+.ground {
+  display: block;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  top: 0;
+  transform-style: preserve-3d;
+  transform: translateZ(-1px);
+}
+
+.ground__base {
+  background: #01c39a;
+  width: 100%;
+  height: 100%;
+}
+
+.ground__foreground {
+  height: 7%;
+  background: #308e6c;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  transform: rotateX(90deg);
+  transform-origin: bottom;
+}
+
+.-near:not(.-visited) .gb {
+  animation: bounce 0.5s ease;
+  transform-origin: center bottom;
+}
+
+.dialogue {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  padding: 2vh;
+  user-select: none;
+  pointer-events: none;
+}
+
+@media (min-width: 600px) {
+  .dialogue {
+    padding: 10vh;
+  }
+}
+
+.dialogue__inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-direction: column;
+  background: white;
+  width: 100%;
+  height: 30vh;
+  border-radius: 4vh;
+  padding: 4vh;
+  opacity: 0;
+}
+
+.dialogue__name {
+  font-size: 3vh;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.dialogue__text {
+  display: block;
+  width: 100%;
+}
+
+.dialogue__text p {
+  display: block;
+  font-size: 14px;
+}
+@media (min-width: 600px) {
+  .dialogue__text p {
+    font-size: 3vh;
+  }
+}
+
+.-chat .dialogue__text p {
+  letter-spacing: 0.15em; /* Adjust as needed */
+  animation: typing 1.5s steps(40, end);
+}
+@media (min-width: 600px) {
+  .-chat .dialogue__text p {
+    overflow: hidden; /* Ensures the content is not revealed until the animation */
+    white-space: nowrap; /* Keeps the content on a single line */
+  }
+}
+
+.dialogue__actions {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+.dialogue__actions > img {
+  width: 5vh;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+}
+
+.choices__item {
+  position: relative;
+}
+.choices__item > p {
+  display: block;
+  font-size: 12px;
+}
+@media (min-width: 600px) {
+  .choices__item > p {
+    font-size: 2vh;
+  }
+}
+
+.choices__item.-active::before {
+  content: ">";
+  position: absolute;
+  right: 100%;
+  font-weight: bold;
+}
+
+.choices__item.-active {
+  font-weight: bold;
+}
+
+.-chat .dialogue__inner {
+  opacity: 1;
+}
+
+body.-zoom-in .scene {
+  transform: translate(-50%, -50%) scale(3);
+}
+
+body.-zoom-in .plane {
+  transform: rotateX(70deg) rotate(-15deg);
+}
+
+.inventory {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  padding: 2vw;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: 20vw;
+}
+
+.inventory img {
+  width: 10vh;
+}
+
+.overlay {
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  color: black;
+  background-color: #fffbdb;
+  font-size: 4rem;
+  text-align: center;
+  display: none;
+  z-index: 1000;
+}
+
+.overlay.-hide {
+  animation: circle-out 1s ease-out forwards;
+}
+
+.overlay button {
+  background: black;
+  color: white;
+  min-width: 300px;
+  text-align: center;
+  border: 0;
+  border-radius: 60px;
+  padding: 2vh;
+  margin: 6vh;
+  text-transform: uppercase;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+.overlay button:hover {
+  background: white;
+  color: black;
+}
+
+.game-over-overlay.-visible {
+  display: flex;
+  animation: circle-in 2s ease-out forwards;
+}
+
+.game-start-overlay {
+  display: flex;
+}
+
+.controls-guide {
+  position: fixed;
+  bottom: 0;
+  padding: 3vh;
+  font-size: 2vh;
+}
