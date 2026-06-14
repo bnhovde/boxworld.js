@@ -97,23 +97,58 @@ const tone = (
   osc.stop(end + 0.02);
 };
 
+// A short filtered-noise burst — used for the soft footstep.
+const noiseBurst = (
+  durationMs: number,
+  volume: number,
+  cutoff: number,
+  delay = 0
+) => {
+  const ctx = getCtx();
+  const t0 = ctx.currentTime + delay;
+  const end = t0 + durationMs / 1000;
+
+  const frames = Math.max(1, Math.ceil((ctx.sampleRate * durationMs) / 1000));
+  const buffer = ctx.createBuffer(1, frames, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < frames; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = cutoff;
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(volume, t0);
+  gain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+  src.connect(filter).connect(gain).connect(ctx.destination);
+  src.start(t0);
+  src.stop(end + 0.02);
+};
+
 export type SynthKind = "walk" | "success" | "blip";
 
 /** A default sound effect generated on the fly, so the engine needs no audio
- *  files. Authors can override any of these with their own via the `sounds`
- *  config. */
+ *  files. Tuned to resemble the original sample-based sounds. Authors can
+ *  override any of these with their own via the `sounds` config. */
 export function createSynthSound(kind: SynthKind, volume: number): Sound {
   let vol = volume;
 
   if (kind === "walk") {
-    // A soft, low footstep repeated while moving.
+    // The original is a soft, quiet broadband footstep, not a tone: a short
+    // low-passed noise burst repeated at a walking cadence.
     let timer: ReturnType<typeof setInterval> | undefined;
-    const step = () => tone(150, 70, vol * 0.5, "sine");
+    const step = () => noiseBurst(90, vol * 0.5, 800);
     return {
       play() {
         if (timer) return;
         step();
-        timer = setInterval(step, 300);
+        timer = setInterval(step, 430);
       },
       stop() {
         if (timer) {
@@ -128,11 +163,18 @@ export function createSynthSound(kind: SynthKind, volume: number): Sound {
   }
 
   if (kind === "success") {
-    // A short ascending arpeggio.
+    // The original resolves on an A-major arpeggio (A4 → C#5 → E5); echo the
+    // top note to land bright like the sample does.
     return {
       play() {
-        [523.25, 659.25, 783.99].forEach((f, i) =>
-          tone(f, 130, vol, "triangle", i * 0.09)
+        const notes: [number, number, number][] = [
+          [440.0, 0.0, 130], // A4
+          [554.37, 0.11, 130], // C#5
+          [659.25, 0.22, 150], // E5
+          [659.25, 0.42, 200], // E5 (held)
+        ];
+        notes.forEach(([f, delay, dur]) =>
+          tone(f, dur, vol, "triangle", delay)
         );
       },
       stop() {},
@@ -142,16 +184,17 @@ export function createSynthSound(kind: SynthKind, volume: number): Sound {
     };
   }
 
-  // blip — a short beep, pitched/lengthened per dialogue length.
-  const ranges: Record<string, [number, number]> = {
-    short: [660, 55],
-    regular: [610, 90],
-    long: [560, 130],
+  // blip — the original is a constant ~784 Hz (G5) buzzy tone; only the length
+  // varies with how much text there is.
+  const durations: Record<string, number> = {
+    short: 110,
+    regular: 150,
+    long: 200,
   };
   return {
     play(sprite) {
-      const [freq, dur] = ranges[sprite ?? "regular"] ?? ranges.regular;
-      tone(freq, dur, vol, "square");
+      const dur = durations[sprite ?? "regular"] ?? durations.regular;
+      tone(783.99, dur, vol, "square");
     },
     stop() {},
     volume(v) {

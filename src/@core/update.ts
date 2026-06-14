@@ -24,12 +24,15 @@ function gameUpdate(state: EngineState, now: number) {
 
   // Check if direction
   if (state.direction) {
-    // Check if direction blocked
+    // Check if direction blocked. Use nextMapOffset — the player's logical
+    // tile, updated synchronously here — not mapOffset, which the renderer
+    // owns and only syncs once per frame (so it's stale when the loop runs
+    // several updates between renders).
     if (state.directionProgress === 0) {
       const increment = getIncrement(state.direction);
       const nextTile = [
-        state.mapOffset[0] + increment.x,
-        state.mapOffset[1] + increment.y,
+        state.nextMapOffset[0] + increment.x,
+        state.nextMapOffset[1] + increment.y,
       ];
       const nextTileObj = state.currentLevel.map?.[nextTile[1]]?.[nextTile[0]];
       const tileBlock =

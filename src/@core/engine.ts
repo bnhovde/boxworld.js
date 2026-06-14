@@ -112,15 +112,15 @@ function Engine(props: CreateGameProps) {
   const sounds = props.sounds ?? {};
   state.walkSound = sounds.walk
     ? createSound(sounds.walk, { loop: true, volume: 0.6 })
-    : createSynthSound("walk", 0.4);
+    : createSynthSound("walk", 0.3); // footstep is intentionally quiet
 
   state.successSound = sounds.success
     ? createSound(sounds.success, { volume: 0.6 })
-    : createSynthSound("success", 0.4);
+    : createSynthSound("success", 0.32);
 
   state.blipSound = sounds.blip
     ? createSound(sounds.blip, { volume: 0.3 })
-    : createSynthSound("blip", 0.3);
+    : createSynthSound("blip", 0.28);
 
   // Setup levels — assemble each level's layers into its tile grid up front.
   state.levels = props.levels.map((level) => ({

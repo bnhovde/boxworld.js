@@ -10,8 +10,10 @@ import { Entity, Level } from "../src";
  */
 const SIZE = 21;
 
-const trees = new Set(["4,4", "6,5", "15,6", "8,13", "16,15", "13,16"]);
-const fences = new Set(["9,9", "10,9", "11,9", "11,10", "11,11"]);
+const trees = new Set(["4,4", "6,5", "15,6", "8,15", "16,15", "13,16"]);
+// A fence wall three tiles above the spawn (player starts at the centre, [10,10]),
+// leaving all four directions open from the start.
+const fences = new Set(["8,7", "9,7", "10,7", "11,7", "12,7"]);
 
 const ground: string[][] = [];
 const foreground: string[][] = [];

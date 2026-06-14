@@ -148,12 +148,6 @@ export type Player = {
 
 // --- Internal types (not part of the public API) ---
 
-export type Loop = {
-  fps: number;
-  main: (frame: number) => void;
-  stopLoop: number;
-};
-
 export type Tile = {
   id: string;
   id2?: string;
