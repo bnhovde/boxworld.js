@@ -10,13 +10,25 @@ import {
   DialogueState,
 } from "../types";
 
-import { createSound, createSynthSound } from "./audio";
+import { createSound } from "./audio";
 import { assembleLayers } from "../utilities/map";
 import gameLoop from "./loop";
 import gameInput from "./input";
 import gameDialogue from "./dialogue";
 import gameUpdate from "./update";
 import gameRender from "./render";
+
+let warnedNoSamples = false;
+const warnNoSamples = () => {
+  if (warnedNoSamples) return;
+  warnedNoSamples = true;
+  console.warn(
+    "[boxworld] No sound effects loaded. Host walk.mp3, success.mp3 and " +
+      "blip.mp3 under your assetPath (e.g. /assets/audio/), or pass them via " +
+      "the `sounds` option. Sample files are in the boxworld example game " +
+      "(example/assets/audio)."
+  );
+};
 
 function Engine(props: CreateGameProps) {
   let game;
@@ -108,19 +120,35 @@ function Engine(props: CreateGameProps) {
   const dialogue = gameDialogue();
   dialogue.initialize();
 
-  // Sounds — synthesized by default, overridable with author-supplied files.
+  // Sounds — hosted by the game like every other asset. By convention they live
+  // at `${assetPath}/audio/{walk,success,blip}.mp3`; the `sounds` option can
+  // point any of them elsewhere. Nothing audio ships in the engine itself.
   const sounds = props.sounds ?? {};
-  state.walkSound = sounds.walk
-    ? createSound(sounds.walk, { loop: true, volume: 0.6 })
-    : createSynthSound("walk", 0.3); // footstep is intentionally quiet
+  const audioBase = `${state.assetPath}/audio`;
 
-  state.successSound = sounds.success
-    ? createSound(sounds.success, { volume: 0.6 })
-    : createSynthSound("success", 0.32);
+  let settled = 0;
+  let loadedAny = false;
+  const trackLoad = (loaded: boolean) => {
+    if (loaded) loadedAny = true;
+    if (++settled === 3 && !loadedAny) {
+      warnNoSamples();
+    }
+  };
 
-  state.blipSound = sounds.blip
-    ? createSound(sounds.blip, { volume: 0.3 })
-    : createSynthSound("blip", 0.28);
+  state.walkSound = createSound(sounds.walk ?? `${audioBase}/walk.mp3`, {
+    loop: true,
+    volume: 0.6,
+    onResolved: trackLoad,
+  });
+  state.successSound = createSound(sounds.success ?? `${audioBase}/success.mp3`, {
+    volume: 0.6,
+    onResolved: trackLoad,
+  });
+  state.blipSound = createSound(sounds.blip ?? `${audioBase}/blip.mp3`, {
+    loop: true, // looped while a line types in, stopped when it finishes
+    volume: 0.3,
+    onResolved: trackLoad,
+  });
 
   // Setup levels — assemble each level's layers into its tile grid up front.
   state.levels = props.levels.map((level) => ({

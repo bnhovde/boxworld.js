@@ -3,6 +3,42 @@ import { equals } from "../utilities/array";
 import { getCurrentMapSlice } from "../utilities/map";
 import { ATTENTION_ICON } from "./icons";
 
+// Reveal dialogue text one character at a time over `durationMs`, then call
+// `onDone`. Driving the reveal in JS (rather than a CSS width animation) means
+// the text genuinely finishes when the last character lands — so the blip can
+// stop exactly then, on lines of any length.
+let typeTimer: ReturnType<typeof setInterval> | undefined;
+const typeText = (
+  container: HTMLElement,
+  text: string,
+  durationMs: number,
+  onDone: () => void
+) => {
+  clearInterval(typeTimer);
+  container.innerHTML = "<p></p>";
+  const p = container.firstElementChild as HTMLElement;
+
+  const chars = [...text];
+  if (chars.length === 0) {
+    onDone();
+    return;
+  }
+
+  let i = 0;
+  const step = () => {
+    i += 1;
+    p.textContent = chars.slice(0, i).join("");
+    if (i >= chars.length) {
+      clearInterval(typeTimer);
+      typeTimer = undefined;
+      onDone();
+    }
+  };
+
+  step(); // first character immediately
+  typeTimer = setInterval(step, durationMs / chars.length);
+};
+
 /** A persistent tile node plus references to its swappable children.
  *  Reused across frames so we never recreate the grid from scratch. */
 type TileSlot = {
@@ -235,7 +271,14 @@ function gameRender(
     const choicesEl = document.getElementById("dialogue-choices");
 
     nameEl.innerText = state.activeEntity?.name;
-    dialogEl.innerHTML = `<p>${state.dialogue.activeDialogue}</p>`;
+
+    // Type the line in; stop the looping blip the moment the last char lands.
+    typeText(
+      dialogEl,
+      state.dialogue.activeDialogue,
+      state.dialogue.revealMs ?? 300,
+      () => state.blipSound?.stop()
+    );
 
     if (
       state.dialogue.currentChoices &&

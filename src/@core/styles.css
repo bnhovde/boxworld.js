@@ -294,13 +294,6 @@ h1 {
 
 .-chat .dialogue__text p {
   letter-spacing: 0.15em; /* Adjust as needed */
-  animation: typing 1.5s steps(40, end);
-}
-@media (min-width: 600px) {
-  .-chat .dialogue__text p {
-    overflow: hidden; /* Ensures the content is not revealed until the animation */
-    white-space: nowrap; /* Keeps the content on a single line */
-  }
 }
 
 .dialogue__actions {

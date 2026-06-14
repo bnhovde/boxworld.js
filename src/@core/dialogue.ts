@@ -1,9 +1,29 @@
 import { DialogueState, EngineState, EntityState } from "../types";
 import { ENTER_ICON } from "./icons";
 
+// How long a line takes to type in, scaled by its length (clamped).
+const MS_PER_CHAR = 45;
+const MIN_REVEAL = 300;
+const MAX_REVEAL = 3000;
+const revealDuration = (text: string) =>
+  Math.min(Math.max((text || "").length * MS_PER_CHAR, MIN_REVEAL), MAX_REVEAL);
+
 // Setup the DOM
 function gameDialogue() {
   let dialogue;
+
+  // The blip is a looping sound. We (re)start it here when a line appears;
+  // render types the text out and stops the blip when the last character lands,
+  // so the blip ends exactly when the text has finished typing in.
+  const showLine = (text: string, state: EngineState) => {
+    state.dialogue.revealMs = revealDuration(text);
+    state.blipSound.stop();
+    state.blipSound.play();
+  };
+
+  const stopBlip = (state: EngineState) => {
+    state.blipSound.stop();
+  };
 
   const initialize = () => {
     const dialogueMarkup = `
@@ -42,7 +62,7 @@ function gameDialogue() {
             return d.condition(state.activeEntity.state);
           }
           return d;
-        }
+        },
       );
 
       // No more dialogue
@@ -50,20 +70,21 @@ function gameDialogue() {
         // Remove classes
         if (state.activeEntity.dialogue) {
           const classesToRemove = state.activeEntity.dialogue.map(
-            (d) => d.class
+            (d) => d.class,
           );
           state.activeEntity.currentClasses =
             state.activeEntity.currentClasses.filter(
-              (c) => !classesToRemove.includes(c)
+              (c) => !classesToRemove.includes(c),
             );
         }
 
         state.activeEntity.currentClasses.push("-visited");
 
+        stopBlip(state);
         state.activeEntity = undefined;
         state.activeEntityDialogue = -1;
         state.currentClasses = state.currentClasses.filter(
-          (c) => !c.includes("-chat")
+          (c) => !c.includes("-chat"),
         );
 
         state.needRender = true;
@@ -90,15 +111,7 @@ function gameDialogue() {
         state.dialogue.updateInventory = true;
       }
 
-      const dialogText = state.activeEntity.dialogue[nextMatchIndex].text || "";
-      const sound =
-        dialogText.length > 40
-          ? "long"
-          : dialogText.length > 20
-          ? "regular"
-          : "short";
-
-      state.blipSound.play(sound);
+      showLine(state.activeEntity.dialogue[nextMatchIndex].text || "", state);
 
       // Check for dialogue choices
       const choices = state.activeEntity.dialogue[nextMatchIndex].choices;
@@ -114,16 +127,17 @@ function gameDialogue() {
         const classesToRemove = state.activeEntity.dialogue.map((d) => d.class);
         state.activeEntity.currentClasses =
           state.activeEntity.currentClasses.filter(
-            (c) => !classesToRemove.includes(c)
+            (c) => !classesToRemove.includes(c),
           );
       }
 
       state.activeEntity.currentClasses.push("-visited");
 
+      stopBlip(state);
       state.activeEntity = undefined;
       state.activeEntityDialogue = -1;
       state.currentClasses = state.currentClasses.filter(
-        (c) => !c.includes("-chat")
+        (c) => !c.includes("-chat"),
       );
     }
     state.needRender = true;
@@ -144,11 +158,11 @@ function gameDialogue() {
           state.arrowDown === "ArrowUp"
             ? Math.max(0, state.dialogue.currentChoiceIndex - 1)
             : state.arrowDown === "ArrowDown"
-            ? Math.min(
-                state.dialogue.currentChoices.length - 1,
-                state.dialogue.currentChoiceIndex + 1
-              )
-            : 0;
+              ? Math.min(
+                  state.dialogue.currentChoices.length - 1,
+                  state.dialogue.currentChoiceIndex + 1,
+                )
+              : 0;
         state.dialogue.currentChoiceIndex = newVal;
         state.needRender = true;
         state.arrowDown = "";
@@ -171,14 +185,7 @@ function gameDialogue() {
 
         state.dialogue.currentDialogue = choice.response.text;
 
-        const sound =
-          choice.response.text.length > 40
-            ? "long"
-            : choice.response.text.length > 20
-            ? "regular"
-            : "short";
-
-        state.blipSound.play(sound);
+        showLine(choice.response.text, state);
 
         state.dialogue.isShowingChoiceResponse = true;
       }
@@ -197,7 +204,7 @@ function gameDialogue() {
       state.dialogue.isShowingChoiceResponse = false;
 
       const entitiesNearby = state.currentLevel.entities.filter(
-        (i) => i.isNear && i.interactive
+        (i) => i.isNear && i.interactive,
       );
       const newEntity = entitiesNearby.find((e) => !e.hasInteracted);
       const entityNearby = newEntity || entitiesNearby[0];
@@ -220,16 +227,10 @@ function gameDialogue() {
         // Change music volume
         state.themeSound?.volume(0.5);
 
-        const dialogText =
-          state.activeEntity.dialogue[firstMatchIndex].text || "";
-        const sound =
-          dialogText.length > 40
-            ? "long"
-            : dialogText.length > 20
-            ? "regular"
-            : "short";
-
-        state.blipSound.play(sound);
+        showLine(
+          state.activeEntity.dialogue[firstMatchIndex].text || "",
+          state,
+        );
 
         // Add dialogue classes
         const dialogClass = state.activeEntity.dialogue[firstMatchIndex].class;
@@ -286,7 +287,7 @@ function gameDialogue() {
 
     if (!state.activeEntity && state.currentClasses.includes("-zoom-in")) {
       state.currentClasses = state.currentClasses.filter(
-        (c) => !c.includes("-zoom")
+        (c) => !c.includes("-zoom"),
       );
 
       // Change music volume

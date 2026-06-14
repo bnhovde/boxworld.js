@@ -41,7 +41,8 @@ const box: Entity = {
   dialogue: [
     { text: "Hi there!" },
     { text: "Welcome to the tiny Boxworld example." },
-    { text: "Use the arrow keys to explore. Bye!" },
+    { text: "Use the arrow keys to explore." },
+    { text: "Bye!" },
   ],
 };
 

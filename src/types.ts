@@ -44,6 +44,8 @@ export type DialogueState = {
   activeChoiceIndex: number;
   isShowingChoiceResponse: boolean;
   updateInventory: boolean;
+  /** How long the current line takes to type in, in ms (scales with length). */
+  revealMs?: number;
 };
 
 /** A grid of asset names. Either a single 11x11 screen (`string[][]`) or a
@@ -88,7 +90,7 @@ export type SoundConfig = {
   walk?: string;
   /** Played on rewards / item pickups. */
   success?: string;
-  /** Dialogue blip. */
+  /** Played once per dialogue line. */
   blip?: string;
 };
 
