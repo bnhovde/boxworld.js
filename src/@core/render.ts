@@ -1,6 +1,147 @@
-import { EngineState, Tile } from "../types";
+import { EngineState, Tile, Entity } from "../types";
 import { equals } from "../utilities/array";
 import { getCurrentMapSlice } from "../utilities/map";
+import { ATTENTION_ICON } from "./icons";
+
+/** A persistent tile node plus references to its swappable children.
+ *  Reused across frames so we never recreate the grid from scratch. */
+type TileSlot = {
+  li: HTMLLIElement;
+  gImg: HTMLImageElement;
+  fgImg: HTMLImageElement;
+  topImg: HTMLImageElement;
+  entityName: string | null;
+  entityEl: HTMLElement | null;
+};
+
+type TilePool = {
+  listEl: HTMLUListElement;
+  slots: TileSlot[];
+};
+
+// One pool per inner element, so multiple engine instances stay isolated.
+const poolRegistry = new WeakMap<HTMLElement, TilePool>();
+
+const getTileClass = (tile: Tile): string => {
+  if (tile?.fg?.includes("90deg-l")) {
+    return "-vert-l";
+  }
+  if (tile?.fg?.includes("90deg-r")) {
+    return "-vert-r";
+  }
+  return "";
+};
+
+const assetUrl = (base: string, name: string) => `${base}/img/${name}.svg`;
+
+// Update a persistent tile image in place instead of recreating it.
+const syncTileImage = (
+  img: HTMLImageElement,
+  asset: string | undefined,
+  className: string,
+  base: string
+) => {
+  if (asset) {
+    const url = assetUrl(base, asset);
+    if (img.getAttribute("src") !== url) {
+      img.setAttribute("src", url);
+    }
+    if (img.className !== className) {
+      img.className = className;
+    }
+    if (img.hidden) {
+      img.hidden = false;
+    }
+  } else if (!img.hidden) {
+    img.hidden = true;
+  }
+};
+
+const createEntityEl = (entity: Entity, base: string): HTMLElement => {
+  const el = document.createElement("div");
+  el.className = `tile__entity ${entity.activeClasses.join(" ")}`;
+  el.id = `entity-${entity.name}`;
+  el.innerHTML = entity.markup;
+
+  if (entity.interactive) {
+    const img = document.createElement("img");
+    img.className = "tile__bubble";
+    img.src = ATTENTION_ICON;
+    el.appendChild(img);
+  }
+
+  return el;
+};
+
+// Build the fixed grid of tile nodes once. Children are pre-created and
+// hidden; later frames only flip `hidden` and swap `src`/classes.
+const createTilePool = (innerEl: HTMLElement, size: number): TilePool => {
+  const listEl = document.createElement("ul");
+  listEl.className = "map";
+
+  const slots: TileSlot[] = [];
+
+  for (let i = 0; i < size; i++) {
+    const li = document.createElement("li");
+    li.className = "tile";
+
+    const gImg = document.createElement("img");
+    gImg.className = "tile__g";
+    gImg.hidden = true;
+
+    const fgImg = document.createElement("img");
+    fgImg.className = "tile__fg";
+    fgImg.hidden = true;
+
+    const topImg = document.createElement("img");
+    topImg.className = "tile__top";
+    topImg.hidden = true;
+
+    li.appendChild(gImg);
+    li.appendChild(fgImg);
+    li.appendChild(topImg);
+    listEl.appendChild(li);
+
+    slots.push({ li, gImg, fgImg, topImg, entityName: null, entityEl: null });
+  }
+
+  innerEl.appendChild(listEl);
+
+  return { listEl, slots };
+};
+
+// Reconcile a single slot against the latest slice cell, touching the DOM
+// only where the contents actually changed.
+const syncTileSlot = (slot: TileSlot, tile: Tile, base: string) => {
+  const className = !tile.g && !tile.fg && !tile.top ? "tile -empty" : "tile";
+  if (slot.li.className !== className) {
+    slot.li.className = className;
+  }
+
+  syncTileImage(slot.gImg, tile.g, "tile__g", base);
+  syncTileImage(
+    slot.fgImg,
+    tile.fg,
+    `tile__fg ${getTileClass(tile)}`.trim(),
+    base
+  );
+  syncTileImage(slot.topImg, tile.top, "tile__top", base);
+
+  const entity = tile.entity && !tile.entity.isHidden ? tile.entity : null;
+  const entityName = entity ? entity.name : null;
+
+  if (entityName !== slot.entityName) {
+    if (slot.entityEl) {
+      slot.li.removeChild(slot.entityEl);
+      slot.entityEl = null;
+    }
+    if (entity) {
+      slot.entityEl = createEntityEl(entity, base);
+      slot.li.appendChild(slot.entityEl);
+    }
+    slot.entityName = entityName;
+  }
+};
 
 function gameRender(
   state: EngineState,
@@ -57,83 +198,16 @@ function gameRender(
       state.currentLevel.entities
     );
 
-    const getTileClass = (tile: Tile) => {
-      if (tile?.fg?.includes("90deg-l")) {
-        return "-vert-l";
-      }
-      if (tile?.fg?.includes("90deg-r")) {
-        return "-vert-r";
-      }
-      return "";
-    };
-
-    // Create map fragment
-    const mapFragment = document.createDocumentFragment();
-    const listEl = document.createElement("ul");
-    listEl.classList.add("map");
-
-    // Append tiles
-    for (let x = 0; x < mapSlice.length; x++) {
-      const tile = mapSlice[x];
-      const tileEl = document.createElement("li");
-      tileEl.className = `tile ${
-        !tile.g && !tile.fg && !tile.top ? "-empty" : ""
-      }`;
-
-      if (tile.g) {
-        const el = document.createElement("img");
-        el.className = "tile__g";
-        el.src = `/assets/img/${tile.g}.svg`;
-        tileEl.appendChild(el);
-      }
-
-      if (tile.fg) {
-        const el = document.createElement("img");
-        el.className = `tile__fg ${getTileClass(tile)}`;
-        el.src = `/assets/img/${tile.fg}.svg`;
-        tileEl.appendChild(el);
-      }
-
-      if (tile.top) {
-        const el = document.createElement("img");
-        el.className = "tile__top";
-        el.src = `/assets/img/${tile.top}.svg`;
-        tileEl.appendChild(el);
-      }
-
-      if (tile.entity && !tile.entity.isHidden) {
-        const el = document.createElement("div");
-        el.className = `tile__entity ${tile.entity.activeClasses.join(" ")}`;
-        el.id = `entity-${tile.entity.name}`;
-
-        el.innerHTML = tile.entity.markup;
-
-        if (tile.entity.interactive) {
-          const img = document.createElement("img");
-          img.className = "tile__bubble";
-          img.src = "/assets/img/attention.svg";
-          el.appendChild(img);
-        }
-
-        tileEl.appendChild(el);
-      }
-
-      if (state.debug) {
-        const el = document.createElement("p");
-        el.className = `tile__debug`;
-        el.innerText = tile.id;
-      }
-
-      listEl.appendChild(tileEl);
+    // Reuse a persistent grid of nodes and only mutate what changed, instead
+    // of tearing down and rebuilding all 121 tiles on every tile-step.
+    let pool = poolRegistry.get(innerEl);
+    if (!pool) {
+      pool = createTilePool(innerEl, mapSlice.length);
+      poolRegistry.set(innerEl, pool);
     }
 
-    mapFragment.appendChild(listEl);
-
-    // Add to DOM
-    if (state.initialised) {
-      innerEl.replaceChild(mapFragment, innerEl.firstElementChild);
-    } else {
-      innerEl.appendChild(mapFragment);
+    for (let i = 0; i < mapSlice.length; i++) {
+      syncTileSlot(pool.slots[i], mapSlice[i], state.assetPath);
     }
 
     state.forceMapRender = false;
@@ -235,7 +309,7 @@ function gameRender(
       .map((item) =>
         `
       <li class="inventory__item">
-        <img class="tile__g" src="/assets/img/${item.asset}.svg" />
+        <img class="tile__g" src="${state.assetPath}/img/${item.asset}.svg" />
       </li>
       `.trim()
       )

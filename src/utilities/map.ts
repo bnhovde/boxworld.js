@@ -1,6 +1,38 @@
 const GRID_SIZE = 11;
 
-import { RawMap, RawMapSmall, GameMap, SlicedMap, Entity } from "../types";
+import {
+  RawMap,
+  RawMapSmall,
+  GameMap,
+  SlicedMap,
+  Entity,
+  MapData,
+} from "../types";
+
+// Chunked maps nest one level deeper than flat ones: a flat cell is a string,
+// a chunked one is a grid.
+const isChunked = (data: MapData): data is RawMap =>
+  Array.isArray((data as RawMap)[0]?.[0]);
+
+// Mirror a layer's shape, replacing every asset name with "" (no tile).
+const emptyLike = (data: any): any =>
+  data.map((x: any) => (Array.isArray(x) ? emptyLike(x) : ""));
+
+/** Assemble the three authoring layers into the engine's tile grid. The
+ *  foreground/top layers are optional; missing ones become empty. Flat and
+ *  chunked ground formats are handled transparently. */
+const assembleLayers = (
+  ground: MapData,
+  foreground?: MapData,
+  top?: MapData
+): GameMap => {
+  const fg = foreground ?? emptyLike(ground);
+  const tp = top ?? emptyLike(ground);
+
+  return isChunked(ground)
+    ? assembleMap(ground, fg as RawMap, tp as RawMap)
+    : assembleMapSmall(ground as RawMapSmall, fg as RawMapSmall, tp as RawMapSmall);
+};
 
 const assembleMap = (g: RawMap, fg: RawMap, top: RawMap): GameMap => {
   let output = [];
@@ -37,34 +69,25 @@ const assembleMap = (g: RawMap, fg: RawMap, top: RawMap): GameMap => {
   return output;
 };
 
+// Flat maps of any rectangular size: each cell is one asset name per layer,
+// indexed `[y][x]`.
 const assembleMapSmall = (
   g: RawMapSmall,
   fg: RawMapSmall,
   top: RawMapSmall
 ): GameMap => {
-  let output = [];
+  const output: GameMap = [];
 
-  for (let i = 0; i < GRID_SIZE; i++) {
-    const columnIndex = i;
-    const columnGround = g[columnIndex];
-    const columnFg = fg[columnIndex];
-    const columnTop = top[columnIndex];
+  for (let i = 0; i < g.length; i++) {
     output[i] = [];
 
-    for (let j = 0; j < GRID_SIZE; j++) {
-      const row = columnGround[j];
-      const rowFg = columnFg[j];
-      const rowTop = columnTop[j];
-
-      output[i] = [
-        ...output[i],
-        {
-          id: `${j},${i}`,
-          g: row,
-          fg: rowFg,
-          top: rowTop,
-        },
-      ];
+    for (let j = 0; j < g[i].length; j++) {
+      output[i].push({
+        id: `${j},${i}`,
+        g: g[i][j],
+        fg: fg[i][j],
+        top: top[i][j],
+      });
     }
   }
 
@@ -125,4 +148,10 @@ const getIncrement = (direction: string) => {
   };
 };
 
-export { assembleMap, assembleMapSmall, getCurrentMapSlice, getIncrement };
+export {
+  assembleLayers,
+  assembleMap,
+  assembleMapSmall,
+  getCurrentMapSlice,
+  getIncrement,
+};

@@ -31,3 +31,5 @@ robots.txt
 
 # Various
 .DS_Store
+# Example build output
+/dist-example

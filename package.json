@@ -2,37 +2,47 @@
   "name": "boxworld",
   "version": "1.0.0",
   "description": "Really basic DOM-based game engine for 2.5D games",
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./boxworld.css": "./dist/boxworld.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
-    "dev": "webpack-dev-server --config webpack.dev.js",
-    "start": "webpack-dev-server --config webpack.prod.js",
-    "build": "webpack --config webpack.prod.js",
+    "dev": "node scripts/example.mjs",
+    "example": "node scripts/example.mjs",
+    "build": "tsup",
+    "build:example": "node scripts/example.mjs --build",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "game-engine",
+    "2.5d",
+    "isometric",
+    "dom",
+    "css",
+    "html5-game"
+  ],
   "author": "Bård N. Hovde",
   "license": "ISC",
   "devDependencies": {
-    "@types/howler": "^2.2.4",
-    "clean-webpack-plugin": "^4.0.0",
-    "copy-webpack-plugin": "^9.0.1",
-    "css-loader": "^6.5.1",
-    "cssnano": "^5.0.11",
-    "file-loader": "^6.2.0",
-    "html-webpack-plugin": "^5.5.0",
-    "mini-css-extract-plugin": "^2.4.4",
-    "postcss": "^8.3.11",
-    "postcss-import": "^14.0.2",
-    "postcss-loader": "^6.2.0",
-    "postcss-preset-env": "^7.0.1",
-    "ts-loader": "^9.2.6",
-    "typescript": "^4.4.4",
-    "webpack": "^5.62.1",
-    "webpack-cli": "^4.9.1",
-    "webpack-dev-server": "^4.4.0"
-  },
-  "dependencies": {
-    "howler": "^2.2.3"
+    "esbuild": "^0.25.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   },
   "directories": {
     "example": "example"

@@ -1,12 +1,16 @@
 {
   "compilerOptions": {
-    "outDir": "./dist/",
-    "noImplicitAny": true,
-    "module": "es6",
+    "target": "es2019",
+    "module": "esnext",
     "moduleResolution": "node",
-    "target": "es5",
+    "lib": ["es2019", "dom", "dom.iterable"],
+    "noImplicitAny": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
     "allowJs": false,
-    "sourceMap": true
+    "sourceMap": true,
+    "outDir": "./dist/"
   },
-  "exclude": ["./example/"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "example"]
 }

@@ -1,9 +1,8 @@
-import { Howl, Howler } from "howler";
 import {
   CreateGameProps,
   EngineState,
   Entity,
-  Level,
+  RuntimeLevel,
   Location,
   Player,
   Item,
@@ -11,6 +10,8 @@ import {
   DialogueState,
 } from "../types";
 
+import { createSound, createSynthSound } from "./audio";
+import { assembleLayers } from "../utilities/map";
 import gameLoop from "./loop";
 import gameInput from "./input";
 import gameDialogue from "./dialogue";
@@ -39,10 +40,11 @@ function Engine(props: CreateGameProps) {
     forceMapRender: false,
     currentLevel: undefined,
     debug: props.debug,
-    levels: [] as Level[],
-    walkSound: undefined as Howl,
-    blipSound: undefined as Howl,
-    successSound: undefined as Howl,
+    levels: [] as RuntimeLevel[],
+    walkSound: undefined,
+    blipSound: undefined,
+    successSound: undefined,
+    themeSound: undefined,
     currentClasses: [] as string[],
     activeClasses: [] as string[],
     player: undefined as Player,
@@ -50,6 +52,7 @@ function Engine(props: CreateGameProps) {
     mapOffset: [0, 0],
     nextMapOffset: [0, 0],
     containerEl: props.selector || "app",
+    assetPath: props.assetPath ?? "/assets",
   };
 
   // Setup the DOM
@@ -105,37 +108,30 @@ function Engine(props: CreateGameProps) {
   const dialogue = gameDialogue();
   dialogue.initialize();
 
-  // Sounds
-  state.walkSound = new Howl({
-    loop: true,
-    volume: 0.6,
-    src: ["/assets/audio/walk.mp3"],
-  });
+  // Sounds — synthesized by default, overridable with author-supplied files.
+  const sounds = props.sounds ?? {};
+  state.walkSound = sounds.walk
+    ? createSound(sounds.walk, { loop: true, volume: 0.6 })
+    : createSynthSound("walk", 0.4);
 
-  state.successSound = new Howl({
-    volume: 0.6,
-    src: ["/assets/audio/success.mp3"],
-  });
+  state.successSound = sounds.success
+    ? createSound(sounds.success, { volume: 0.6 })
+    : createSynthSound("success", 0.4);
 
-  state.blipSound = new Howl({
-    src: ["/assets/audio/text.mp3"],
-    sprite: {
-      short: [0, 400],
-      regular: [400, 900],
-      long: [2200, 2500],
-    },
-    volume: 0.3,
-  });
+  state.blipSound = sounds.blip
+    ? createSound(sounds.blip, { volume: 0.3 })
+    : createSynthSound("blip", 0.3);
 
-  // Setup levels
+  // Setup levels — assemble each level's layers into its tile grid up front.
   state.levels = props.levels.map((level) => ({
     ...level,
+    map: assembleLayers(level.ground, level.foreground, level.top),
     entities: level.entities.map((entity) => ({
       ...entity,
       isActive: false,
       isNear: false,
-      activeClasses: [],
-      currentClasses: [],
+      activeClasses: [] as string[],
+      currentClasses: [] as string[],
     })),
   }));
 
@@ -148,8 +144,8 @@ function Engine(props: CreateGameProps) {
         ...entity,
         isActive: false,
         isNear: false,
-        activeClasses: [],
-        currentClasses: [],
+        activeClasses: [] as string[],
+        currentClasses: [] as string[],
       });
     }
   };
@@ -159,7 +155,7 @@ function Engine(props: CreateGameProps) {
     const markup = `
       <div class="player" id="player">
         <div class="player-inner">
-          <img src="/assets/img/${player.asset}.svg" />
+          <img src="${state.assetPath}/img/${player.asset}.svg" />
         </div>
       </div>
     `;
@@ -176,34 +172,41 @@ function Engine(props: CreateGameProps) {
   const setLevel = (levelId: string, offset?: Location) => {
     const match = state.levels.find((l) => l.id === levelId);
 
-    // Determine offset
-    const offsetX = offset ? offset[0] : (match.map.length - 1) / 2;
-    const offsetY = offset ? offset[1] : (match.map.length - 1) / 2;
+    if (!match) {
+      return;
+    }
 
-    if (match) {
-      // Stop previous theme if exists
-      if (state.currentLevel && state.currentLevel.theme) {
-        state.currentLevel.theme.stop();
-      }
+    // Determine offset (center of the map by default)
+    const mapSize = match.map.length;
+    const offsetX = offset ? offset[0] : (mapSize - 1) / 2;
+    const offsetY = offset ? offset[1] : (mapSize - 1) / 2;
 
-      // Set new level
-      state.currentLevel = match;
-      state.nextMapOffset = [offsetX, offsetY];
-      state.outsideBounds = "";
-      state.needRender = true;
+    // Stop previous theme if playing
+    state.themeSound?.stop();
 
-      // Set ground theme
-      if (match.groundTheme) {
-        state.currentClasses = state.currentClasses.filter(
-          (c) => !c.includes("-theme-")
-        );
-        state.currentClasses.push(`-theme-${match.groundTheme}`);
-      }
+    // Set new level
+    state.currentLevel = match;
+    state.nextMapOffset = [offsetX, offsetY];
+    state.outsideBounds = "";
+    state.needRender = true;
 
-      // Start theme if exists
-      if (match.theme) {
-        match.theme.play();
-      }
+    // Set ground theme
+    if (match.groundTheme) {
+      state.currentClasses = state.currentClasses.filter(
+        (c) => !c.includes("-theme-")
+      );
+      state.currentClasses.push(`-theme-${match.groundTheme}`);
+    }
+
+    // Start background music if the level defines one
+    if (match.theme) {
+      state.themeSound = createSound(
+        `${state.assetPath}/audio/${match.theme}.mp3`,
+        { loop: true }
+      );
+      state.themeSound.play();
+    } else {
+      state.themeSound = undefined;
     }
   };
 

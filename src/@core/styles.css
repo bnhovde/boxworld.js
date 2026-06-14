@@ -1,4 +1,5 @@
 @import "./backpack.css";
+@import "./animations.css";
 
 :root {
   --base-font-size: 2rem;

@@ -1,4 +1,5 @@
 import { DialogueState, EngineState, EntityState } from "../types";
+import { ENTER_ICON } from "./icons";
 
 // Setup the DOM
 function gameDialogue() {
@@ -12,7 +13,7 @@ function gameDialogue() {
           <div class="dialogue__text" id="dialogue-text"></div>
           <div class="dialogue__choices" id="dialogue-choices"></div>
           <div class="dialogue__actions">
-            <img src="/assets/img/enter.svg" />
+            <img src="${ENTER_ICON}" />
           </div>
         </div>
       </ul>`;
@@ -217,9 +218,7 @@ function gameDialogue() {
         state.activeEntityDialogue = firstMatchIndex;
 
         // Change music volume
-        if (state.currentLevel.theme) {
-          state.currentLevel.theme.volume(0.5);
-        }
+        state.themeSound?.volume(0.5);
 
         const dialogText =
           state.activeEntity.dialogue[firstMatchIndex].text || "";
@@ -291,9 +290,7 @@ function gameDialogue() {
       );
 
       // Change music volume
-      if (state.currentLevel.theme) {
-        state.currentLevel.theme.volume(1);
-      }
+      state.themeSound?.volume(1);
 
       state.needRender = true;
     }
